@@ -13,14 +13,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ========================================================================
-__author__ = 'Jinho D. Choi'
-
+__author__ = 'Jinho Choi, Dani Roytburg'
 from emora_stdm import DialogueFlow
 
 transitions = {
     'state': 'start',
-    '`Hello, how can I help you?`': {
-        # TODO: to be filled.
+    '`Hi there! How can I help you?`': {
+        '[{haircut, [hair, cut], [cut, hair]}]': {
+            '`Let\'s get you a haircut! What times are you looking for?`': {
+                '{[monday, 10 am], [monday, 1 pm], [monday, 2 pm], [tuesday, 2 pm]}': {
+                    '`Unfortunately, we cannot accommodate that time. Please re-book with a different date. We appreciate your understanding.`': 'end'
+                },
+                'error': {
+                    '`Great! We\'ve got that appointment set up for you. We look forward to seeing you soon!`': 'end'
+                }
+            }
+        },
+        '[{[color, hair], [hair, coloring]}]' : {
+            '`We can do that for you! What times were you looking at for that?`': {
+                '{[wednesday, 10 am], [wednesday, 11 am], [wednesday, 1 pm], [thursday, 10 am], [thursday, 11 am]}': {
+                    '`Unfortunately, we cannot accommodate that time. Please re-book with a different date. We appreciate your understanding.`': 'end'
+                },
+                'error': {
+                    '`Great! We\'ve got that appointment set up for you. We look forward to seeing you soon!`': 'end'
+                }
+            }
+        },
+        '[{perm, perms}]' : {
+            '`We can do that for you! What times were you looking at for that?`': {
+                '{[friday, 10 am], [friday, 11 am], [friday, 1 pm], [friday, 2 pm], [Saturday, 10 am], [Saturday, 2 pm]}': {
+                    '`Unfortunately, we cannot accommodate that time. Please re-book with a different date. We appreciate your understanding.`': 'end'
+                },
+                'error': {
+                    '`Great! We\'ve got that appointment set up for you. We look forward to seeing you soon!`': 'end'
+                }
+            }
+        },
+        'error': {
+            '`I\'m sorry -- either you\'ve requested a service that we do not offer, or we cannot understand your request.\n'
+            'We provide haircuts, hair colorings, and perms. Can we start over?\n`': 'start'
+        }
     }
 }
 
