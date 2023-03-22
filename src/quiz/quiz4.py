@@ -52,7 +52,7 @@ artist_data = pd.read_csv("resources/quiz4/music-data/data.csv")
 def extract_quoted_text(s):
     pattern = r'\"(.*?)\"'
     result = re.findall(pattern, s)
-    return result[0]
+    return result[0].lower()
 def getpoints(x, y):
     rawtext = urlopen('https://api.weather.gov/points/' + str(x) + "," + str(y)).read()
     jason = json.loads(rawtext)
@@ -271,7 +271,7 @@ class MacroDetails(Macro):
         return detailed_sentence(vars)
 
 def isInterrogative(text):
-    if any(trigger in vars['__user_utterance__'] for trigger in
+    if any(trigger in text for trigger in
            ['tell me more', 'why', 'about', 'is it', 'is that', 'is the movie', 'what is the song', 'detail', 'what is',
             'specific', '?']):
         return True
@@ -329,13 +329,16 @@ class MacroGetSong(Macro):
             ban_list = []
         artist_choices = list(vars['artist_picks']['artists'])
         random.shuffle(artist_choices)
-        artist = artist_choices.pop()
+        try:
+            artist = artist_choices.pop()
+        except:
+            return "we couldn\'t find any. sorry! wanna try again?"
         artist_mask = [artist in ast.literal_eval(roster) for roster in artist_data['artists']]
         songs = artist_data.loc[artist_mask]['name']
         if len(songs) == 0:
             return "we couldn\'t find any. sorry! wanna try again?"
         else:
-            return f"i recommend {list(songs)[0]}. it\'s a good {request} choice by {artist}."
+            return f"ok {vars['name']}, i recommend {list(songs)[0]}. it\'s a good {request} choice by {artist}."
 
 
 
@@ -394,6 +397,7 @@ transitions_movies = {
     '#FMOVIE': {
         '#WANTSDETAILS': {
             '#DETAILS': {
+                '[song]': 'song',
                 '#NEGATIVE': 'movie',
                 'error': {
                     '#POSITIVE': {
