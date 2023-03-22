@@ -24,7 +24,7 @@ import re
 import random
 import spacy
 
-nlp = spacy.load("en_core_web_lg")
+nlp = spacy.load("en_core_web_trf")
 
 
 class MacroName(Macro):
@@ -33,11 +33,9 @@ class MacroName(Macro):
             return vars['name']
         else:
             output = vars['__user_utterance__']
-            print(output)
             doc = nlp(output)
             name = [thing.text for thing in doc.ents if thing.label_ == 'PERSON']
             if len(name) == 0:
-                print(doc, "HEEEE")
                 return False
             else:
                 vars['name'] = name[0]
@@ -89,7 +87,7 @@ class MacroMovie(Macro):
             genras[key] = genres
         vars['genres'] = genras
         vars['keywords'] = keys
-        cast = pd.read_csv("quiz3/credits.csv")
+        cast = pd.read_csv("../../resources/quiz3/credits.csv")
         id = int(moviename.iloc[0].name)
         vars['characters'] = [(x['name'], x['character']) for x in ast.literal_eval(cast.loc[id]['cast'])]
         return True
@@ -165,7 +163,7 @@ transitions = {
             '#NAME`-- what a beautiful name!\ni\'m teevee, a bot that likes to talk about movies.`': 'getmovie'
         },
         'error': {
-            '`sorry, i didn\'t catch that, i\'m sorry :(. let\'ts start over.`': {
+            '`sorry, i didn\'t catch that, i\'m sorry :(. let\'s start over.`': {
                 'error': 'start'
             }
         }
@@ -237,7 +235,7 @@ df = DialogueFlow('start', end_state='end')
 df.load_transitions(transitions)
 df.load_transitions(transitions_get_movie)
 df.load_transitions(transitions_actor)
-df.knowledge_base().load_json_file('quiz3/ontology_quiz3.json')
+df.knowledge_base().load_json_file('resources/quiz3/ontology_quiz3.json')
 df.add_macros(macros)
 
 if __name__ == '__main__':
