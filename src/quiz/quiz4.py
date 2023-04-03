@@ -137,11 +137,12 @@ class MacroGetName(Macro):
             if len(name) == 0:
                 return False
             else:
-                if name[0] != 'i am':
+                if name[0] not in ['i am', 'my name is']:
                     vars['name'] = name[0]
                 else:
                     vars['name'] = name[-1]
                 return True
+
 
 class MacroForceName(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -198,7 +199,7 @@ def pick_movie(all_variables):
 class MacroGetMovie(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         if 'another_try' in vars:
-            print(f"sorry you didn't like it :(\nok {vars['name']}... let\'s try again ")
+            print(f"ok {vars['name']}... let\'s try again ")
         bank = ['my next hottest pick is #MOVIE.', 'i think you should totally watch #MOVIE.', 'in my opinion, you should check out #MOVIE.', '#MOVIE is really good; at least so i\'ve heard!', 'maybe check out #MOVIE!', 'as an AI language model, i cannot express value judgements. however, a little birdie told me #MOVIE was good.']
         vars['current_pick'] = pick_movie(vars)
         return random.choice(bank).replace('#MOVIE', vars['current_pick']['title'])
@@ -231,7 +232,7 @@ def detailed_sentence(vars):
     for tag in tags:
         if len(tag.split()) == 1:
             doc = nlp(tag)
-            if doc[0].pos_ == 'NOUN' and any(symbol not in tag for symbol in ["(","/","\\","$"]):
+            if doc[0].pos_ == 'NOUN' and doc[0].text not in {"own", "dvd", "earn"} and any(symbol not in tag for symbol in ["(","/","\\","$"]):
                 nouns.append(doc[0].lemma_.lower())
             elif doc[0].pos_ == 'ADJ' and sentiment(doc.text)[0]['label'] == 'POSITIVE':
                 adjectives.append(doc[0].lemma_.lower())
@@ -303,7 +304,7 @@ class MacroIsNegative(Macro):
             return False
 class MacroPositive(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        recommendation = {'type': 'movie', 'title': vars['current_pick']['title'], 'accepted': 'yes'}
+        recommendation = {'type': vars['__system_state__'], 'title': vars['current_pick']['title'], 'accepted': 'yes'}
         if 'user_data' in vars:
             vars['user_data']['recommendations'].insert(0, recommendation)
             row = deef.loc[deef['name'] == vars['name']].iloc[0]
@@ -332,11 +333,13 @@ class MacroGetSong(Macro):
         try:
             artist = artist_choices.pop()
         except:
-            return "we couldn\'t find any. sorry! wanna try again?"
+            print("we couldn\'t find any. sorry! wanna try again?")
+            return False
         artist_mask = [artist in ast.literal_eval(roster) for roster in artist_data['artists']]
         songs = artist_data.loc[artist_mask]['name']
+        vars['current_pick'] = {'title': list(songs)[0]}
         if len(songs) == 0:
-            return "we couldn\'t find any. sorry! wanna try again?"
+            print("we couldn\'t find any. sorry! wanna try again?")
         else:
             return f"ok {vars['name']}, i recommend {list(songs)[0]}. it\'s a good {request} choice by {artist}."
 
@@ -392,20 +395,23 @@ transitions_gotname = {
         }
     }
 }
+
 transitions_movies = {
     'state': 'movie',
     '#FMOVIE': {
         '#WANTSDETAILS': {
             '#DETAILS': {
-                '[song]': 'song',
+                '[{song, music, album}]': 'song',
                 '#NEGATIVE': 'movie',
                 'error': {
                     '#POSITIVE': {
-                        '[{yes, yeah, sure, fine, ok, alright, please, another, again, -song}]': 'movie',
+                        '<{yes, something else, yeah, sure, fine, ok, alright, another, again}>': 'movie',
                         '[{music, song, album, artist, listen to}]': 'song',
+                        '[{no, i am ok, i am good, that is ok, i will pass}]': {
+                            '`bye-bye,`#NAME`. don\'t forget me!`': 'end'
+                        },
                         'error': {
-                            'score': 0.1,
-                            '`goodbye!`': 'end'
+                            '`bye-bye,`#NAME`. don\'t forget me!`': 'end'
                         }
                     }
                 }
@@ -414,11 +420,13 @@ transitions_movies = {
         '#NEGATIVE': 'movie',
         'error': {
             '#POSITIVE': {
-                '[{yes, yeah, sure, fine, ok, alright, please, another, again, -song}]': 'movie',
+                '<{yes, yeah, sure, something else, fine, ok, alright, another, again}>': 'movie',
                 '[{music, song, album, artist, listen to}]': 'song',
+                '[{no, i am ok, i am good, that is ok, i will pass}]': {
+                    '`bye-bye,`#NAME`. don\'t forget me!`': 'end'
+                },
                 'error': {
-                    'score': 0.1,
-                    '`goodbye!`': 'end'
+                    '`bye-bye,`#NAME`. don\'t forget me!`': 'end'
                 }
             }
         }
@@ -428,11 +436,35 @@ transitions_song = {
     'state': 'song',
     '`put a genre in quotation marks and i\'ll find something!`': {
         '#FORCENAME': {
-            '#SONG': 'end'
+            '#SONG': {
+                '#WANTSDETAILS': {
+                    '`take another one.` #SONG': 'end'
+                },
+                'NEGATIVE': {
+                    '`fine. want another?` #SONG': 'end'
+                },
+                'error': {
+                    '#POSITIVE': {
+                        '<{yes, yeah, sure, something else, fine, ok, alright, another, again}>': 'song',
+                        '[{movie, film, watch, series}]': 'movie',
+                        '[{no, i am ok, i am good, that is ok, i will pass}]': {
+                            '`bye-bye,`#NAME`. don\'t forget me!`': 'end'
+                        },
+                        'error': {
+                            '`bye-bye,`#NAME`. don\'t forget me!`': 'end'
+                        }
+                    }
+                }
+            },
+            'error': {
+                '`i don\'t know that genre, my bad! let\'s try again.`' : 'song'
+            }
         },
-        'error': 'end'
+        'error': 'song'
     }
 }
+
+
 df = DialogueFlow('start', end_state='end')
 df.add_macros(macros)
 df.load_transitions(transitions)

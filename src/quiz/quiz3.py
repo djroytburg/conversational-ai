@@ -38,10 +38,15 @@ class MacroName(Macro):
             if len(name) == 0:
                 return False
             else:
-                vars['name'] = name[0]
+                if name[0] != 'i am':
+                    vars['name'] = name[0]
+                else:
+                    vars['name'] = name[-1]
                 return True
 
 
+metadata = pd.read_csv("https://media.githubusercontent.com/media/djroytburg/quiz3/main/quiz3/movies_metadata.csv")
+keywords = pd.read_csv("https://media.githubusercontent.com/media/djroytburg/quiz3/main/quiz3/keywords.csv")
 class MacroMovie(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         output = vars['__raw_user_utterance__'].lower().replace(",", "").replace(".", "").replace(":", "")
@@ -55,8 +60,6 @@ class MacroMovie(Macro):
         one_word = False
         if len(filter) == 1:
             one_word = True
-        metadata = pd.read_csv("https://raw.githubusercontent.com/djroytburg/quiz3/main/quiz3/movies_metadata.csv")
-        keywords = pd.read_csv("https://raw.githubusercontent.com/djroytburg/quiz3/main/quiz3/keywords.csv")
         mask = [all(word in title for word in filter) for title in metadata['title1']]
         if one_word:
             mask = [title == filter[0] for title in metadata['title1']]
@@ -87,7 +90,7 @@ class MacroMovie(Macro):
             genras[key] = genres
         vars['genres'] = genras
         vars['keywords'] = keys
-        cast = pd.read_csv("../../resources/quiz3/credits.csv")
+        cast = pd.read_csv("https://media.githubusercontent.com/media/djroytburg/quiz3/main/quiz3/credits.csv")
         id = int(moviename.iloc[0].name)
         vars['characters'] = [(x['name'], x['character']) for x in ast.literal_eval(cast.loc[id]['cast'])]
         return True
@@ -107,7 +110,10 @@ class MacroAboutGenre(Macro):
                      'that\'s a #GENRE movie, right?  what\'s your favorite genre?']
         genres = vars['genres']
         # print(genres[vars['pickid']])
-        return random.choice(responses).replace("#GENRE", random.choice(genres[vars['pickid']]).lower())
+        selection = random.choice(genres[vars['pickid']]).lower()
+        while selection == 'drama' and len(genres[vars['pickid']]) > 1:
+            selection = random.choice(genres[vars['pickid']]).lower()
+        return random.choice(responses).replace("#GENRE", selection)
 
 
 class MacroGetDemonym(Macro):
@@ -153,7 +159,7 @@ class MacroGiveCharacters(Macro):
         better, worse = picks[a], picks[1 - a]
         betact, betchar = better
         woract, worchar = worse
-        return f"Did you like {betact.lower()}'s performance?"
+        return f"did you like {betact.lower()}'s performance?"
 
 
 transitions = {
@@ -195,7 +201,11 @@ transitions_get_movie = {
                 '#IF(#DEMONYM)': {
                     '`That\'s awesome, what ties you to`#CULTURE`culture?`': {
                         'error': {
-                            '`that\'s awesome,`#NAME`. i hope that`#WATCHED`made you think about`#CULTURE`a bit, even if they were unrelated.`': 'actor'
+                            '`did`#WATCHED`make you think about`#CULTURE`film?`': {
+                                'error': {
+                                    '`i see. anyways,`': 'actor'
+                                }
+                            }
                         }
                     }
                 },
